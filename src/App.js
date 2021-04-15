@@ -3,7 +3,7 @@ import {BrowserRouter as Router, Route, Switch, Link} from 'react-router-dom'
 import './App.css'
 import BookShelf from './components/BookShelf'
 import Book from './components/Book'
-import {getAll,search} from './BooksAPI'
+import {getAll,search,update} from './BooksAPI'
 
 class BooksApp extends React.Component {
   state = { 
@@ -23,7 +23,9 @@ async componentDidMount () {
 
 }
 changeShelf = (book,shelf) =>{
+  //removing book from state when shelf === none
   if (shelf === 'none'){
+    
     this.setState({
       books: this.state.books.filter( function (stateBook){
         if (stateBook.id === book.id) {
@@ -33,6 +35,10 @@ changeShelf = (book,shelf) =>{
         }
   })
     })
+
+    update(book,shelf).then(()=> {return})
+  
+    //await update (books,she)
   } else {
     this.setState({
       books: this.state.books.map( bk => {
@@ -45,6 +51,7 @@ changeShelf = (book,shelf) =>{
   
       })
     })
+    update(book,shelf).then(()=> {return})
   }
 }
 
@@ -64,20 +71,30 @@ if (isNotThere){
   this.setState({
     books: tempArray
   })
+  update(book,shelf).then(()=> {return})
 }
 }
 async updateSearchQuery(quer){
+  console.log("query is"+quer)
     try {
+      //show nothing when query is empty
       if (quer === '' || quer === undefined){
         this.setState({query: ''})
-        this.setState({searchedBooksToShow: []})
-        
+        this.setState({searchedBooksToShow: ''})   
         return
       }
       this.setState({query: quer})
       const searchedBooks = await search(quer);
+      //Check is returned response has no books
+      if (searchedBooks.error){
+        this.setState({searchedBooksToShow: ''})
+         alert('Sorry No Books found!')
+        return
+      }
+      //Execute when books are present, 
       this.state.books.forEach((bk) => {  
         searchedBooks.filter( function (sbook){
+      //Ensures returned books match state of the already existing books
           if (sbook.id === bk.id && (sbook.shelf !== 'read'|| sbook.shelf !== 'wantToRead'
            || sbook.shelf !== 'currentlyReading' || sbook.shelf === undefined) ) {
                 sbook.shelf = bk.shelf
@@ -150,7 +167,6 @@ async updateSearchQuery(quer){
                     <Book 
                         title ={searchBook.title} 
                         author = {searchBook.authors}
-                        img = {searchBook.imageLinks.thumbnail?searchBook.imageLinks.thumbnail:"NA"}
                         category = {searchBook.shelf}
                         changeShelf ={this.addNewBookToShelf}
                         bookObj = {searchBook}
